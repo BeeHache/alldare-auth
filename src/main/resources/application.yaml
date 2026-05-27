@@ -1,0 +1,37 @@
+spring:
+  application:
+    name: alldare-auth
+  
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/alldare_auth}
+    username: ${SPRING_DATASOURCE_USERNAME:alldare_admin}
+    password: ${SPRING_DATASOURCE_PASSWORD:password}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+    show-sql: false
+
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+
+  security:
+    oauth2:
+      authorizationserver:
+        issuer: ${AUTH_ISSUER_URI:http://localhost:9000}
+
+server:
+  port: 9000
+
+logging:
+  level:
+    online.alldare.auth: DEBUG
+    org.springframework.security: INFO
+    org.springframework.security.oauth2: INFO
+    org.hibernate.SQL: INFO
