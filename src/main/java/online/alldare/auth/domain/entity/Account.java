@@ -2,8 +2,11 @@ package online.alldare.auth.domain.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import online.alldare.common.enums.AccountStatus;
+import online.alldare.common.enums.AccountType;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.hibernate.annotations.UuidGenerator;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -18,6 +21,8 @@ import java.util.UUID;
 public class Account {
 
     @Id
+    @GeneratedValue
+    @UuidGenerator
     private UUID id;
 
     @Column(unique = true, nullable = false)
@@ -26,14 +31,22 @@ public class Account {
     @Column(name = "password_hash", nullable = false)
     private String passwordHash;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private String status; // ACTIVE, BANNED, PENDING
+    private AccountStatus status;
 
-    @Column(nullable = false)
-    private String role; // e.g., USER, ADMIN
+    @ManyToMany(fetch = FetchType.EAGER)
+    @JoinTable(
+            name = "account_roles",
+            joinColumns = @JoinColumn(name = "account_id"),
+            inverseJoinColumns = @JoinColumn(name = "role_id")
+    )
+    @Builder.Default
+    private java.util.Set<Role> roles = new java.util.HashSet<>();
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "account_type", nullable = false)
-    private String accountType; // USER, ADMIN
+    private AccountType accountType;
 
     @Column(name = "last_login")
     private Instant lastLogin;
