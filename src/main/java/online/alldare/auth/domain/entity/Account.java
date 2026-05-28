@@ -21,8 +21,6 @@ import java.util.UUID;
 public class Account {
 
     @Id
-    @GeneratedValue
-    @UuidGenerator
     private UUID id;
 
     @Column(unique = true, nullable = false)

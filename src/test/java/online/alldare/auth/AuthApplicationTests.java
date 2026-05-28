@@ -25,7 +25,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 @Testcontainers
 @ActiveProfiles("test")
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@jakarta.transaction.Transactional
 class AuthApplicationTests {
 
     @Container

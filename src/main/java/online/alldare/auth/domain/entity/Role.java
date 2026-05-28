@@ -13,10 +13,9 @@ import lombok.*;
 public class Role {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "parent_id")
     private Role parentRole;
 
