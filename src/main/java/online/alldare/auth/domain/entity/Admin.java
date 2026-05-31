@@ -16,8 +16,6 @@ import java.util.UUID;
 public class Admin {
 
     @Id
-    @GeneratedValue
-    @UuidGenerator
     private UUID id;
 
     @Column(name = "account_id", nullable = false, unique = true)

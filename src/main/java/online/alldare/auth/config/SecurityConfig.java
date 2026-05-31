@@ -16,7 +16,9 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http) throws Exception {
         http
+            .csrf(csrf -> csrf.disable()) // Disable CSRF for API endpoints
             .authorizeHttpRequests(authorize -> authorize
+                .requestMatchers("/api/v1/auth/register").permitAll()
                 .anyRequest().authenticated()
             )
             .formLogin(Customizer.withDefaults());

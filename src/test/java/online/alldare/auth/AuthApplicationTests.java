@@ -21,10 +21,19 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.MockMvc;
+
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
 @SpringBootTest
 @Testcontainers
 @ActiveProfiles("test")
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
+@AutoConfigureMockMvc
 class AuthApplicationTests {
 
     @Container
@@ -37,8 +46,31 @@ class AuthApplicationTests {
     @Autowired
     private RoleRepository roleRepository;
 
+    @Autowired
+    private MockMvc mockMvc;
+
     @Test
     void contextLoads() {
+    }
+
+    @Test
+    void shouldRegisterUser() throws Exception {
+        String json = """
+                {
+                  "login": "newuser",
+                  "password": "password123"
+                }
+                """;
+
+        mockMvc.perform(post("/api/v1/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.login").value("newuser"))
+                .andExpect(jsonPath("$.accountId").exists())
+                .andExpect(jsonPath("$.userId").exists());
+
+        assertThat(accountRepository.findByLogin("newuser")).isPresent();
     }
 
     @Test
