@@ -73,20 +73,30 @@ public class AuthorizationServerConfig {
 
     @Bean
     public RegisteredClientRepository registeredClientRepository() {
-        RegisteredClient oidcClient = RegisteredClient.withId(UUID.randomUUID().toString())
-            .clientId("alldare-client")
-            .clientSecret("{noop}secret") // {noop} for plain text in dev
+        RegisteredClient webClient = RegisteredClient.withId(UUID.randomUUID().toString())
+            .clientId("alldare-web")
+            .clientSecret("{noop}secret")
             .clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_BASIC)
             .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
             .authorizationGrantType(AuthorizationGrantType.REFRESH_TOKEN)
-            .redirectUri("http://127.0.0.1:8080/login/oauth2/code/alldare-client")
-            .postLogoutRedirectUri("http://127.0.0.1:8080/")
+            .redirectUri("http://localhost:3000/api/auth/callback/alldare")
+            .postLogoutRedirectUri("http://localhost:3000/")
             .scope(OidcScopes.OPENID)
             .scope(OidcScopes.PROFILE)
-            .clientSettings(ClientSettings.builder().requireAuthorizationConsent(true).build())
+            .clientSettings(ClientSettings.builder().requireAuthorizationConsent(false).build())
             .build();
 
-        return new InMemoryRegisteredClientRepository(oidcClient);
+        RegisteredClient mobileClient = RegisteredClient.withId(UUID.randomUUID().toString())
+            .clientId("alldare-mobile")
+            .clientAuthenticationMethod(ClientAuthenticationMethod.NONE) // PKCE
+            .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
+            .redirectUri("online.alldare://auth")
+            .scope(OidcScopes.OPENID)
+            .scope(OidcScopes.PROFILE)
+            .clientSettings(ClientSettings.builder().requireProofKey(true).requireAuthorizationConsent(false).build())
+            .build();
+
+        return new InMemoryRegisteredClientRepository(webClient, mobileClient);
     }
 
     @Bean

@@ -1,4 +1,4 @@
-CREATE TABLE roles (
+ereCREATE TABLE roles (
     id SERIAL PRIMARY KEY,
     parent_id INTEGER DEFAULT 0,
     name VARCHAR(50) UNIQUE NOT NULL
