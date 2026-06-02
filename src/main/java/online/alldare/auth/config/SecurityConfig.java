@@ -1,5 +1,6 @@
 package online.alldare.auth.config;
 
+import online.alldare.auth.service.CustomOAuth2UserService;
 import online.alldare.auth.service.CustomOidcUserService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -17,9 +18,11 @@ import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 public class SecurityConfig {
 
     private final CustomOidcUserService customOidcUserService;
+    private final CustomOAuth2UserService customOAuth2UserService;
 
-    public SecurityConfig(CustomOidcUserService customOidcUserService) {
+    public SecurityConfig(CustomOidcUserService customOidcUserService, CustomOAuth2UserService customOAuth2UserService) {
         this.customOidcUserService = customOidcUserService;
+        this.customOAuth2UserService = customOAuth2UserService;
     }
 
     @Bean
@@ -37,6 +40,7 @@ public class SecurityConfig {
             .oauth2Login(oauth2 -> oauth2
                 .userInfoEndpoint(userInfo -> userInfo
                     .oidcUserService(customOidcUserService)
+                    .userService(customOAuth2UserService)
                 )
             );
         return http.build();

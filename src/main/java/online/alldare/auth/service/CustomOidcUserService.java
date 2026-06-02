@@ -21,7 +21,7 @@ public class CustomOidcUserService extends OidcUserService {
         String registrationId = userRequest.getClientRegistration().getRegistrationId();
         
         // Provision internal account based on OIDC user info
-        Account internalAccount = accountService.provisionOidcUser(oidcUser, registrationId.toUpperCase());
+        Account internalAccount = accountService.provisionOAuth2User(oidcUser, registrationId.toUpperCase());
         
         // We can wrap or extend the user if we need to add custom authorities based on internalAccount
         return oidcUser;

@@ -13,6 +13,7 @@ import online.alldare.common.enums.AccountStatus;
 import online.alldare.common.enums.AccountType;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.core.oidc.user.OidcUser;
+import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -65,12 +66,23 @@ public class AccountService {
     }
 
     @Transactional
-    public Account provisionOidcUser(OidcUser oidcUser, String provider) {
-        String providerId = oidcUser.getSubject();
+    public Account provisionOAuth2User(OAuth2User oauth2User, String provider) {
+        String providerId;
+        String email;
+
+        if (oauth2User instanceof OidcUser oidcUser) {
+            providerId = oidcUser.getSubject();
+            email = oidcUser.getEmail();
+        } else {
+            // Standard OAuth2 (e.g. GitHub)
+            Object id = oauth2User.getAttribute("id");
+            providerId = id != null ? id.toString() : oauth2User.getName();
+            email = oauth2User.getAttribute("email");
+        }
+
         return accountRepository.findByProviderAndProviderId(provider, providerId)
                 .orElseGet(() -> {
-                    String email = oidcUser.getEmail();
-                    String login = email != null ? email : provider + "_" + providerId;
+                    String login = email != null ? email : provider.toLowerCase() + "_" + providerId;
 
                     return accountRepository.findByLogin(login)
                             .map(account -> {
