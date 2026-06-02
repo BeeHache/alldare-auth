@@ -12,6 +12,7 @@ import online.alldare.auth.repository.UserRepository;
 import online.alldare.common.enums.AccountStatus;
 import online.alldare.common.enums.AccountType;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -61,5 +62,48 @@ public class AccountService {
                 .userId(userId)
                 .login(account.getLogin())
                 .build();
+    }
+
+    @Transactional
+    public Account provisionOidcUser(OidcUser oidcUser, String provider) {
+        String providerId = oidcUser.getSubject();
+        return accountRepository.findByProviderAndProviderId(provider, providerId)
+                .orElseGet(() -> {
+                    String email = oidcUser.getEmail();
+                    String login = email != null ? email : provider + "_" + providerId;
+
+                    return accountRepository.findByLogin(login)
+                            .map(account -> {
+                                account.setProvider(provider);
+                                account.setProviderId(providerId);
+                                return accountRepository.save(account);
+                            })
+                            .orElseGet(() -> {
+                                Role userRole = roleRepository.findByName("USER")
+                                        .orElseThrow(() -> new RuntimeException("Default USER role not found"));
+
+                                UUID accountId = UUID.randomUUID();
+                                Account account = Account.builder()
+                                        .id(accountId)
+                                        .login(login)
+                                        .status(AccountStatus.ACTIVE)
+                                        .roles(Set.of(userRole))
+                                        .accountType(AccountType.USER)
+                                        .provider(provider)
+                                        .providerId(providerId)
+                                        .build();
+
+                                accountRepository.save(account);
+
+                                UUID userId = UUID.randomUUID();
+                                User userProfile = User.builder()
+                                        .id(userId)
+                                        .accountId(accountId)
+                                        .build();
+
+                                userRepository.save(userProfile);
+                                return account;
+                            });
+                });
     }
 }

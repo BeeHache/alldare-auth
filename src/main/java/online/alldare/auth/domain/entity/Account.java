@@ -26,8 +26,15 @@ public class Account {
     @Column(unique = true, nullable = false)
     private String login;
 
-    @Column(name = "password_hash", nullable = false)
+    @Column(name = "password_hash")
     private String passwordHash;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private String provider = "LOCAL";
+
+    @Column(name = "provider_id")
+    private String providerId;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

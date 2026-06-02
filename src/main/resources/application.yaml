@@ -25,6 +25,12 @@ spring:
     oauth2:
       authorizationserver:
         issuer: ${AUTH_ISSUER_URI:http://localhost:9000}
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID:google-id}
+            client-secret: ${GOOGLE_CLIENT_SECRET:google-secret}
+            scope: openid, profile, email
 
 server:
   port: 9000
