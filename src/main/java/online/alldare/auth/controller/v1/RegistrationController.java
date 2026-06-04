@@ -1,5 +1,6 @@
-package online.alldare.auth.controller;
+package online.alldare.auth.controller.v1;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import online.alldare.auth.dto.RegisterRequest;
 import online.alldare.auth.dto.RegisterResponse;
@@ -16,7 +17,7 @@ public class RegistrationController {
 
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)
-    public RegisterResponse register(@RequestBody RegisterRequest request) {
+    public RegisterResponse register(@Valid @RequestBody RegisterRequest request) {
         return accountService.registerUser(request);
     }
 }

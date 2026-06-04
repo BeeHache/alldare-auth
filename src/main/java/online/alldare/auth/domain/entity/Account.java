@@ -6,7 +6,6 @@ import online.alldare.common.enums.AccountStatus;
 import online.alldare.common.enums.AccountType;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
-import org.hibernate.annotations.UuidGenerator;
 
 import java.time.Instant;
 import java.util.UUID;

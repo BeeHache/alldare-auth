@@ -1,3 +1,9 @@
+alldare:
+  admin:
+    default:
+      login: ${DEFAULT_ADMIN_LOGIN:admin}
+      password: ${DEFAULT_ADMIN_PASSWORD:}
+
 spring:
   application:
     name: alldare-auth
@@ -42,6 +48,6 @@ server:
 logging:
   level:
     online.alldare.auth: DEBUG
-    org.springframework.security: INFO
-    org.springframework.security.oauth2: INFO
+    org.springframework.security: TRACE
+    org.springframework.security.oauth2: TRACE
     org.hibernate.SQL: INFO
