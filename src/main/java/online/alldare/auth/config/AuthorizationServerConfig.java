@@ -33,12 +33,18 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
 import org.springframework.security.web.util.matcher.MediaTypeRequestMatcher;
 
+import java.security.KeyFactory;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
+import java.security.spec.PKCS8EncodedKeySpec;
+import java.security.spec.X509EncodedKeySpec;
+import java.util.Base64;
 import java.util.Set;
 import java.util.UUID;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.stream.Collectors;
 
 @Configuration
@@ -103,16 +109,46 @@ public class AuthorizationServerConfig {
 
     @Bean
     public JWKSource<SecurityContext> jwkSource() {
+        RSAKey rsaKey = loadRsa();
+        JWKSet jwkSet = new JWKSet(rsaKey);
+        return new ImmutableJWKSet<>(jwkSet);
+    }
+
+    private RSAKey loadRsa() {
+        try {
+            String privateKeyPath = System.getenv("JWT_PRIVATE_KEY_PATH");
+            String publicKeyPath = System.getenv("JWT_PUBLIC_KEY_PATH");
+
+            if (privateKeyPath != null && publicKeyPath != null) {
+                String privateKeyContent = Files.readString(Paths.get(privateKeyPath))
+                        .replace("-----BEGIN PRIVATE KEY-----", "")
+                        .replace("-----END PRIVATE KEY-----", "")
+                        .replaceAll("\\s", "");
+                String publicKeyContent = Files.readString(Paths.get(publicKeyPath))
+                        .replace("-----BEGIN PUBLIC KEY-----", "")
+                        .replace("-----END PUBLIC KEY-----", "")
+                        .replaceAll("\\s", "");
+
+                KeyFactory kf = KeyFactory.getInstance("RSA");
+                RSAPrivateKey privateKey = (RSAPrivateKey) kf.generatePrivate(new PKCS8EncodedKeySpec(Base64.getDecoder().decode(privateKeyContent)));
+                RSAPublicKey publicKey = (RSAPublicKey) kf.generatePublic(new X509EncodedKeySpec(Base64.getDecoder().decode(publicKeyContent)));
+
+                return new RSAKey.Builder(publicKey)
+                        .privateKey(privateKey)
+                        .keyID("static-key")
+                        .build();
+            }
+        } catch (Exception e) {
+            // Fallback to dynamic if loading fails
+        }
         KeyPair keyPair = generateRsaKey();
         RSAPublicKey publicKey = (RSAPublicKey) keyPair.getPublic();
         RSAPrivateKey privateKey = (RSAPrivateKey) keyPair.getPrivate();
-        RSAKey rsaKey = new RSAKey.Builder(publicKey)
+        return new RSAKey.Builder(publicKey)
             .privateKey(privateKey)
             .keyUse(KeyUse.SIGNATURE)
             .keyID(UUID.randomUUID().toString())
             .build();
-        JWKSet jwkSet = new JWKSet(rsaKey);
-        return new ImmutableJWKSet<>(jwkSet);
     }
 
     private static KeyPair generateRsaKey() {

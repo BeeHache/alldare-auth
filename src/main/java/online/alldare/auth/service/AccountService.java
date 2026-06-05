@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import online.alldare.auth.domain.entity.Account;
 import online.alldare.auth.domain.entity.Role;
 import online.alldare.auth.domain.entity.User;
+import online.alldare.auth.dto.AccountDTO;
 import online.alldare.auth.dto.RegisterRequest;
 import online.alldare.auth.dto.RegisterResponse;
 import online.alldare.auth.repository.AccountRepository;
@@ -11,6 +12,8 @@ import online.alldare.auth.repository.RoleRepository;
 import online.alldare.auth.repository.UserRepository;
 import online.alldare.common.enums.AccountStatus;
 import online.alldare.common.enums.AccountType;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 import org.springframework.security.oauth2.core.user.OAuth2User;
@@ -19,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -117,5 +121,32 @@ public class AccountService {
                                 return account;
                             });
                 });
+    }
+
+    @Transactional(readOnly = true)
+    public Page<AccountDTO> getAllAccounts(Pageable pageable) {
+        return accountRepository.findAll(pageable)
+                .map(this::convertToDTO);
+    }
+
+    @Transactional
+    public AccountDTO updateAccountStatus(UUID id, AccountStatus status) {
+        Account account = accountRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Account not found: " + id));
+        account.setStatus(status);
+        return convertToDTO(accountRepository.save(account));
+    }
+
+    private AccountDTO convertToDTO(Account account) {
+        return AccountDTO.builder()
+                .id(account.getId())
+                .login(account.getLogin())
+                .provider(account.getProvider())
+                .status(account.getStatus())
+                .accountType(account.getAccountType())
+                .roles(account.getRoles().stream().map(Role::getName).collect(Collectors.toSet()))
+                .createdAt(account.getCreatedAt())
+                .lastLogin(account.getLastLogin())
+                .build();
     }
 }

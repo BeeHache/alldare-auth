@@ -50,13 +50,22 @@ public class AuthController {
                 .map(GrantedAuthority::getAuthority)
                 .collect(Collectors.joining(" "));
 
-        JwtClaimsSet claims = JwtClaimsSet.builder()
+        JwtClaimsSet.Builder claimsBuilder = JwtClaimsSet.builder()
                 .issuer("http://localhost:9000") // Should match AUTH_ISSUER_URI
                 .issuedAt(now)
                 .expiresAt(now.plusSeconds(3600))
                 .subject(authentication.getName())
-                .claim("roles", scope.replace("ROLE_", ""))
-                .build();
+                .claim("roles", scope.replace("ROLE_", ""));
+
+        accountRepository.findByLogin(authentication.getName())
+                .ifPresent(account -> claimsBuilder.claim("userId", account.getId().toString()));
+        
+        // Handle in-memory admin
+        if ("admin".equals(authentication.getName())) {
+            claimsBuilder.claim("userId", "00000000-0000-0000-0000-000000000001");
+        }
+
+        JwtClaimsSet claims = claimsBuilder.build();
 
         String token = jwtEncoder.encode(JwtEncoderParameters.from(claims)).getTokenValue();
 
@@ -67,11 +76,27 @@ public class AuthController {
      * Returns the current authenticated user's account details.
      */
     @GetMapping("/me")
-    public Account getMe(@AuthenticationPrincipal UserDetails userDetails) {
-        if (userDetails == null) {
+    public Account getMe(Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated()) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User is not authenticated");
         }
-        return accountRepository.findByLogin(userDetails.getUsername())
-                .orElseThrow(() -> new RuntimeException("Account not found"));
+        
+        String login = authentication.getName();
+        return accountRepository.findByLogin(login)
+                .orElseGet(() -> {
+                    // Check if it's the in-memory admin
+                    if ("admin".equals(login)) {
+                        Account adminAccount = new Account();
+                        adminAccount.setId(java.util.UUID.fromString("00000000-0000-0000-0000-000000000001"));
+                        adminAccount.setLogin("admin");
+                        adminAccount.setAccountType(online.alldare.common.enums.AccountType.ADMIN);
+                        adminAccount.setStatus(online.alldare.common.enums.AccountStatus.ACTIVE);
+                        adminAccount.setRoles(java.util.Set.of(
+                            online.alldare.auth.domain.entity.Role.builder().name("ADMIN").build()
+                        ));
+                        return adminAccount;
+                    }
+                    throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Account not found");
+                });
     }
 }
