@@ -102,4 +102,13 @@ class JpaUserDetailsServiceTest {
         assertThatThrownBy(() -> userDetailsService.loadUserByUsername(login))
                 .isInstanceOf(UsernameNotFoundException.class);
     }
+
+    @Test
+    void loadUserByUsername_AdminNotFoundInDb_ThrowsException() {
+        String login = "admin";
+        when(accountRepository.findByLogin(login)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> userDetailsService.loadUserByUsername(login))
+                .isInstanceOf(UsernameNotFoundException.class);
+    }
 }

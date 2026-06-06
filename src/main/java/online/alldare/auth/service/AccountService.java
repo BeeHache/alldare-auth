@@ -131,6 +131,9 @@ public class AccountService {
 
     @Transactional
     public AccountDTO updateAccountStatus(UUID id, AccountStatus status) {
+        if (UUID.fromString("00000000-0000-0000-0000-000000000001").equals(id)) {
+            throw new RuntimeException("Cannot modify status of the default admin account");
+        }
         Account account = accountRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Account not found: " + id));
         account.setStatus(status);

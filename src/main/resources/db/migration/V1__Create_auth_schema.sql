@@ -51,3 +51,15 @@ CREATE TABLE mods (
     account_id UUID NOT NULL UNIQUE,
     CONSTRAINT fk_mod_account FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE CASCADE
 );
+
+-- Insert default admin account
+INSERT INTO accounts (id, login, status, account_type, provider, created_at, updated_at)
+VALUES ('00000000-0000-0000-0000-000000000001', 'admin', 'ACTIVE', 'ADMIN', 'LOCAL', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+
+-- Link account to ADMIN role
+INSERT INTO account_roles (account_id, role_id)
+SELECT '00000000-0000-0000-0000-000000000001', id FROM roles WHERE name = 'ADMIN';
+
+-- Insert into admins table
+INSERT INTO admins (account_id)
+VALUES ('00000000-0000-0000-0000-000000000001');

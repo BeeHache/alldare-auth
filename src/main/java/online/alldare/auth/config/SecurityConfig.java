@@ -1,5 +1,6 @@
 package online.alldare.auth.config;
 
+import online.alldare.auth.security.OAuth2AuthenticationSuccessHandler;
 import online.alldare.auth.service.CustomOAuth2UserService;
 import online.alldare.auth.service.CustomOidcUserService;
 import org.springframework.context.annotation.Bean;
@@ -26,10 +27,14 @@ public class SecurityConfig {
 
     private final CustomOidcUserService customOidcUserService;
     private final CustomOAuth2UserService customOAuth2UserService;
+    private final OAuth2AuthenticationSuccessHandler oauth2SuccessHandler;
 
-    public SecurityConfig(CustomOidcUserService customOidcUserService, CustomOAuth2UserService customOAuth2UserService) {
+    public SecurityConfig(CustomOidcUserService customOidcUserService, 
+                          CustomOAuth2UserService customOAuth2UserService,
+                          OAuth2AuthenticationSuccessHandler oauth2SuccessHandler) {
         this.customOidcUserService = customOidcUserService;
         this.customOAuth2UserService = customOAuth2UserService;
+        this.oauth2SuccessHandler = oauth2SuccessHandler;
     }
 
     @Bean
@@ -49,6 +54,7 @@ public class SecurityConfig {
                     .oidcUserService(customOidcUserService)
                     .userService(customOAuth2UserService)
                 )
+                .successHandler(oauth2SuccessHandler)
             );
         return http.build();
     }

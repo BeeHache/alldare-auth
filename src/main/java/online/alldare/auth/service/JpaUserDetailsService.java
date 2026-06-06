@@ -31,14 +31,6 @@ public class JpaUserDetailsService implements UserDetailsService {
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        if (defaultAdminLogin.equals(username) && defaultAdminPassword != null && !defaultAdminPassword.isEmpty()) {
-            return User.builder()
-                    .username(defaultAdminLogin)
-                    .password(passwordEncoder.encode(defaultAdminPassword))
-                    .roles("ADMIN")
-                    .build();
-        }
-
         Account account = accountRepository.findByLogin(username)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found: " + username));
 

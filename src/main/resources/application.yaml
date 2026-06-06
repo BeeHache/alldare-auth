@@ -1,4 +1,6 @@
 alldare:
+  auth:
+    issuer-uri: ${AUTH_ISSUER_URI:http://localhost:9000}
   admin:
     default:
       login: ${DEFAULT_ADMIN_LOGIN:admin}
@@ -35,15 +37,16 @@ spring:
         registration:
           google:
             client-id: ${GOOGLE_CLIENT_ID:google-id}
-            client-secret: ${GOOGLE_CLIENT_SECRET:google-secret}
+            client-secret: ${GOOGLE_SECRET:google-secret}
             scope: openid, profile, email
           github:
             client-id: ${GITHUB_CLIENT_ID:github-id}
-            client-secret: ${GITHUB_CLIENT_SECRET:github-secret}
+            client-secret: ${GITHUB_SECRET:github-secret}
             scope: read:user, user:email
 
 server:
   port: 9000
+  forward-headers-strategy: native
 
 logging:
   level:

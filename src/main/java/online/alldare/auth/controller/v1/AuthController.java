@@ -7,8 +7,6 @@ import online.alldare.auth.repository.AccountRepository;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.oauth2.jwt.JwtClaimsSet;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
@@ -23,15 +21,25 @@ import org.springframework.http.HttpStatus;
 import jakarta.validation.Valid;
 import java.time.Instant;
 import java.util.stream.Collectors;
-import org.springframework.security.core.GrantedAuthority;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 
+/**
+ * REST controller for handling authentication and user profile requests.
+ */
 @RestController
 @RequestMapping("/api/v1/auth")
 public class AuthController {
 
+    private static final Logger log = LoggerFactory.getLogger(AuthController.class);
+
     private final AccountRepository accountRepository;
     private final AuthenticationManager authenticationManager;
     private final JwtEncoder jwtEncoder;
+
+    @Value("${alldare.auth.issuer-uri:http://localhost:9000}")
+    private String issuerUri;
 
     public AuthController(AccountRepository accountRepository, AuthenticationManager authenticationManager, JwtEncoder jwtEncoder) {
         this.accountRepository = accountRepository;
@@ -39,6 +47,9 @@ public class AuthController {
         this.jwtEncoder = jwtEncoder;
     }
 
+    /**
+     * Authenticates a user with login and password and returns a JWT token.
+     */
     @PostMapping("/login")
     public LoginResponse login(@Valid @RequestBody LoginRequest loginRequest) {
         Authentication authentication = authenticationManager.authenticate(
@@ -47,26 +58,21 @@ public class AuthController {
 
         Instant now = Instant.now();
         String scope = authentication.getAuthorities().stream()
-                .map(GrantedAuthority::getAuthority)
+                .map(org.springframework.security.core.GrantedAuthority::getAuthority)
                 .collect(Collectors.joining(" "));
 
         JwtClaimsSet.Builder claimsBuilder = JwtClaimsSet.builder()
-                .issuer("http://localhost:9000") // Should match AUTH_ISSUER_URI
+                .issuer(issuerUri)
                 .issuedAt(now)
                 .expiresAt(now.plusSeconds(3600))
                 .subject(authentication.getName())
                 .claim("roles", scope.replace("ROLE_", ""));
 
+        // Optionally add internal user ID to claims if available
         accountRepository.findByLogin(authentication.getName())
                 .ifPresent(account -> claimsBuilder.claim("userId", account.getId().toString()));
-        
-        // Handle in-memory admin
-        if ("admin".equals(authentication.getName())) {
-            claimsBuilder.claim("userId", "00000000-0000-0000-0000-000000000001");
-        }
 
         JwtClaimsSet claims = claimsBuilder.build();
-
         String token = jwtEncoder.encode(JwtEncoderParameters.from(claims)).getTokenValue();
 
         return new LoginResponse(token);
@@ -78,25 +84,21 @@ public class AuthController {
     @GetMapping("/me")
     public Account getMe(Authentication authentication) {
         if (authentication == null || !authentication.isAuthenticated()) {
+            log.warn("getMe called with unauthenticated request");
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User is not authenticated");
         }
         
         String login = authentication.getName();
+        log.info("Fetching profile for authenticated login: {}", login);
+        
         return accountRepository.findByLogin(login)
-                .orElseGet(() -> {
-                    // Check if it's the in-memory admin
-                    if ("admin".equals(login)) {
-                        Account adminAccount = new Account();
-                        adminAccount.setId(java.util.UUID.fromString("00000000-0000-0000-0000-000000000001"));
-                        adminAccount.setLogin("admin");
-                        adminAccount.setAccountType(online.alldare.common.enums.AccountType.ADMIN);
-                        adminAccount.setStatus(online.alldare.common.enums.AccountStatus.ACTIVE);
-                        adminAccount.setRoles(java.util.Set.of(
-                            online.alldare.auth.domain.entity.Role.builder().name("ADMIN").build()
-                        ));
-                        return adminAccount;
-                    }
-                    throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Account not found");
+                .map(account -> {
+                    log.info("Account found for login: {}", login);
+                    return account;
+                })
+                .orElseThrow(() -> {
+                    log.error("Account NOT found for login: {}", login);
+                    return new ResponseStatusException(HttpStatus.NOT_FOUND, "Account not found");
                 });
     }
 }

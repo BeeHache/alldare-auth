@@ -6,6 +6,7 @@ import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.jwk.source.ImmutableJWKSet;
 import com.nimbusds.jose.jwk.source.JWKSource;
 import com.nimbusds.jose.proc.SecurityContext;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
@@ -50,11 +51,15 @@ import java.util.stream.Collectors;
 @Configuration
 public class AuthorizationServerConfig {
 
+    @Value("${alldare.auth.issuer-uri:http://localhost:9000}")
+    private String issuerUri;
+
     @Bean
     @Order(1)
     public SecurityFilterChain authorizationServerSecurityFilterChain(HttpSecurity http) throws Exception {
         OAuth2AuthorizationServerConfigurer authorizationServerConfigurer =
                 new OAuth2AuthorizationServerConfigurer();
+
         http
             .securityMatcher(authorizationServerConfigurer.getEndpointsMatcher())
             .with(authorizationServerConfigurer, (authorizationServer) ->
@@ -81,19 +86,6 @@ public class AuthorizationServerConfig {
 
     @Bean
     public RegisteredClientRepository registeredClientRepository() {
-        RegisteredClient webClient = RegisteredClient.withId(UUID.randomUUID().toString())
-            .clientId("alldare-web")
-            .clientSecret("{noop}secret")
-            .clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_BASIC)
-            .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
-            .authorizationGrantType(AuthorizationGrantType.REFRESH_TOKEN)
-            .redirectUri("http://localhost:3000/api/auth/callback/alldare")
-            .postLogoutRedirectUri("http://localhost:3000/")
-            .scope(OidcScopes.OPENID)
-            .scope(OidcScopes.PROFILE)
-            .clientSettings(ClientSettings.builder().requireAuthorizationConsent(false).build())
-            .build();
-
         RegisteredClient mobileClient = RegisteredClient.withId(UUID.randomUUID().toString())
             .clientId("alldare-mobile")
             .clientAuthenticationMethod(ClientAuthenticationMethod.NONE) // PKCE
@@ -104,7 +96,7 @@ public class AuthorizationServerConfig {
             .clientSettings(ClientSettings.builder().requireProofKey(true).requireAuthorizationConsent(false).build())
             .build();
 
-        return new InMemoryRegisteredClientRepository(webClient, mobileClient);
+        return new InMemoryRegisteredClientRepository(mobileClient);
     }
 
     @Bean
@@ -190,6 +182,8 @@ public class AuthorizationServerConfig {
 
     @Bean
     public AuthorizationServerSettings authorizationServerSettings() {
-        return AuthorizationServerSettings.builder().build();
+        return AuthorizationServerSettings.builder()
+                .issuer(issuerUri)
+                .build();
     }
 }
