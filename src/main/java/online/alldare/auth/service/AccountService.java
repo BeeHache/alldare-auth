@@ -7,11 +7,13 @@ import online.alldare.auth.domain.entity.User;
 import online.alldare.auth.dto.AccountDTO;
 import online.alldare.auth.dto.RegisterRequest;
 import online.alldare.auth.dto.RegisterResponse;
+import online.alldare.auth.messaging.MessagePublisher;
 import online.alldare.auth.repository.AccountRepository;
 import online.alldare.auth.repository.RoleRepository;
 import online.alldare.auth.repository.UserRepository;
 import online.alldare.common.enums.AccountStatus;
 import online.alldare.common.enums.AccountType;
+import online.alldare.common.event.AccountCreatedEvent;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -32,6 +34,9 @@ public class AccountService {
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
+    private final MessagePublisher messagePublisher;
+
+    private static final String ACCOUNTS_STREAM = "stream:accounts";
 
     @Transactional
     public RegisterResponse registerUser(RegisterRequest request) {
@@ -61,6 +66,8 @@ public class AccountService {
                 .build();
 
         userRepository.save(userProfile);
+
+        publishAccountCreatedEvent(account);
 
         return RegisterResponse.builder()
                 .accountId(accountId)
@@ -118,6 +125,9 @@ public class AccountService {
                                         .build();
 
                                 userRepository.save(userProfile);
+
+                                publishAccountCreatedEvent(account, oauth2User);
+
                                 return account;
                             });
                 });
@@ -151,5 +161,32 @@ public class AccountService {
                 .createdAt(account.getCreatedAt())
                 .lastLogin(account.getLastLogin())
                 .build();
+    }
+
+    private void publishAccountCreatedEvent(Account account) {
+        publishAccountCreatedEvent(account, null);
+    }
+
+    private void publishAccountCreatedEvent(Account account, OAuth2User oauth2User) {
+        String displayName = null;
+        String avatarUrl = null;
+
+        if (oauth2User != null) {
+            displayName = oauth2User.getAttribute("name");
+            avatarUrl = oauth2User.getAttribute("avatar_url");
+            if (avatarUrl == null) {
+                avatarUrl = oauth2User.getAttribute("picture"); // Google
+            }
+        }
+
+        AccountCreatedEvent event = AccountCreatedEvent.builder()
+                .accountId(account.getId())
+                .login(account.getLogin())
+                .displayName(displayName)
+                .avatarUrl(avatarUrl)
+                .roles(account.getRoles().stream().map(Role::getName).collect(Collectors.toSet()))
+                .build();
+
+        messagePublisher.publish(ACCOUNTS_STREAM, event);
     }
 }

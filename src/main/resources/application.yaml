@@ -29,6 +29,12 @@ spring:
     enabled: true
     baseline-on-migrate: true
 
+  data:
+    redis:
+      host: ${SPRING_DATA_REDIS_HOST:localhost}
+      port: ${SPRING_DATA_REDIS_PORT:6379}
+      password: ${SPRING_DATA_REDIS_PASSWORD:password}
+
   security:
     oauth2:
       authorizationserver:
