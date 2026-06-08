@@ -6,6 +6,10 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import online.alldare.auth.domain.entity.Account;
 import online.alldare.auth.service.AccountService;
+import online.alldare.auth.messaging.MessagePublisher;
+import online.alldare.common.event.AccountLoginEvent;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
@@ -25,15 +29,21 @@ import java.util.stream.Collectors;
 @Component
 public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationSuccessHandler {
 
+    private static final Logger log = LoggerFactory.getLogger(OAuth2AuthenticationSuccessHandler.class);
+
     private final JwtEncoder jwtEncoder;
     private final AccountService accountService;
+    private final MessagePublisher messagePublisher;
 
     @Value("${alldare.auth.issuer-uri:http://localhost:9000}")
     private String issuerUri;
 
-    public OAuth2AuthenticationSuccessHandler(JwtEncoder jwtEncoder, AccountService accountService) {
+    public OAuth2AuthenticationSuccessHandler(JwtEncoder jwtEncoder, 
+                                            AccountService accountService,
+                                            MessagePublisher messagePublisher) {
         this.jwtEncoder = jwtEncoder;
         this.accountService = accountService;
+        this.messagePublisher = messagePublisher;
     }
 
     @Override
@@ -76,6 +86,8 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
         JwtClaimsSet claims = claimsBuilder.build();
         String token = jwtEncoder.encode(JwtEncoderParameters.from(claims)).getTokenValue();
 
+        publishLoginEvent(account, request, registrationId.toUpperCase());
+
         // Add cookie for local development convenience
         Cookie authCookie = new Cookie("auth_token", token);
         authCookie.setPath("/");
@@ -86,5 +98,31 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
         return UriComponentsBuilder.fromUriString("https://localhost/auth/callback")
                 .queryParam("token", token)
                 .build().toUriString();
+    }
+
+    private void publishLoginEvent(Account account, HttpServletRequest request, String method) {
+        try {
+            AccountLoginEvent event = AccountLoginEvent.builder()
+                    .accountId(account.getId())
+                    .login(account.getLogin())
+                    .loginTime(Instant.now())
+                    .ipAddress(getClientIp(request))
+                    .userAgent(request.getHeader("User-Agent"))
+                    .loginMethod(method)
+                    .build();
+            
+            messagePublisher.publish("stream:logins", event);
+            log.info("Published AccountLoginEvent (OAuth2) for user: {}", account.getLogin());
+        } catch (Exception e) {
+            log.error("Failed to publish OAuth2 login event for user: {}", account.getLogin(), e);
+        }
+    }
+
+    private String getClientIp(HttpServletRequest request) {
+        String xForwardedFor = request.getHeader("X-Forwarded-For");
+        if (xForwardedFor != null && !xForwardedFor.isEmpty()) {
+            return xForwardedFor.split(",")[0].trim();
+        }
+        return request.getRemoteAddr();
     }
 }
