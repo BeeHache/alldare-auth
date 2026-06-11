@@ -6,6 +6,7 @@ import online.alldare.common.enums.AccountStatus;
 import online.alldare.common.enums.AccountType;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -25,6 +26,7 @@ public class Account {
     @Column(unique = true, nullable = false)
     private String login;
 
+    @JsonIgnore
     @Column(name = "password_hash")
     private String passwordHash;
 
