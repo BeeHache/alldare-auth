@@ -70,6 +70,9 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
         // Provision/Retrieve the internal account
         Account account = accountService.provisionOAuth2User(oauth2User, registrationId.toUpperCase());
 
+        // Detect if the account was newly provisioned (null createdAt or within last 10 seconds)
+        boolean isNewUser = account.getCreatedAt() == null || account.getCreatedAt().isAfter(Instant.now().minusSeconds(10));
+
         Instant now = Instant.now();
         String scope = authentication.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
@@ -97,6 +100,7 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
 
         return UriComponentsBuilder.fromUriString("https://localhost/auth/callback")
                 .queryParam("token", token)
+                .queryParam("newRegistration", isNewUser)
                 .build().toUriString();
     }
 
